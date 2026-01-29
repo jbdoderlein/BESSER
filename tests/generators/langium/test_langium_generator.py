@@ -285,11 +285,11 @@ def test_langium_generator_non_navigable_associations(tmpdir):
     with open(output_file, "r", encoding="utf-8") as f:
         generated_code = f.read()
 
-    # Owner should have an inline reference to Car (navigable)
-    assert "'car' ':' car=[Car:ID]" in generated_code
+    # Owner should have an inline reference to Car using association name (navigable)
+    assert "'Ownership' ':' Ownership=[Car:ID]" in generated_code
     
     # Car should NOT have a reference to Owner (non-navigable)
-    # Check that Car class doesn't contain 'owner' reference
+    # Check that Car class doesn't contain 'owner' or 'Ownership' reference
     car_section = generated_code.split("// Owner class definition")[0]
     assert "'owner'" not in car_section or "owner=" not in car_section
 
@@ -390,10 +390,10 @@ def test_langium_multi_valued_references_use_plus_equals(tmpdir):
     with open(output_file, "r", encoding="utf-8") as f:
         generated_code = f.read()
 
-    # Multi-valued references should use += operator with field name
-    assert "products+=[Product:ID]" in generated_code
-    assert "categories+=[Category:ID]" in generated_code
+    # Multi-valued references should use += operator with association name
+    assert "ProductCategories+=[Product:ID]" in generated_code
+    assert "ProductCategories+=[Category:ID]" in generated_code
     
     # Should have the repeated assignment pattern with += for the same field
-    assert "(',' products+=[Product:ID])" in generated_code
-    assert "(',' categories+=[Category:ID])" in generated_code
+    assert "(',' ProductCategories+=[Product:ID])" in generated_code
+    assert "(',' ProductCategories+=[Category:ID])" in generated_code
