@@ -14,6 +14,7 @@ from besser.generators.json import JSONSchemaGenerator
 from besser.generators.agents.baf_generator import BAFGenerator
 from besser.generators.web_app import WebAppGenerator
 from besser.generators.qiskit import QiskitGenerator
+from besser.generators.langium import LangiumGenerator
 
 
 class GeneratorInfo(NamedTuple):
@@ -115,6 +116,15 @@ SUPPORTED_GENERATORS: Dict[str, GeneratorInfo] = {
         category="quantum",
         requires_class_diagram=False
     ),
+    
+    # Language engineering / DSL generators
+    "langium": GeneratorInfo(
+        generator_class=LangiumGenerator,
+        output_type="file",
+        file_extension=".langium",
+        category="language_engineering",
+        requires_class_diagram=True
+    ),
 }
 
 
@@ -141,6 +151,8 @@ def get_filename_for_generator(generator_type: str, base_name: str = "output") -
         return "json_schema.json"
     elif generator_type == "qiskit":
         return "qiskit_circuit.py"
+    elif generator_type == "langium":
+        return f"{base_name}.langium"
     else:
         return f"{generator_type}_output{info.file_extension}"
 

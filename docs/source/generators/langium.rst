@@ -22,6 +22,9 @@ domain-specific language based on your UML model.
 Usage
 -----
 
+Python SDK
+~~~~~~~~~~
+
 To generate a Langium grammar from your :doc:`../buml_language/model_types/structural`, create a 
 ``LangiumGenerator`` object and use the ``generate`` method:
 
@@ -44,6 +47,28 @@ You can specify a custom output directory:
     
     generator = LangiumGenerator(model=library_model, output_dir="./my_langium_project")
     generator.generate()
+
+Web Modeling Editor
+~~~~~~~~~~~~~~~~~~~
+
+The Langium generator is also available through the BESSER Web Modeling Editor backend API:
+
+1. **Via the Web UI**: Select "Langium" from the generator dropdown when viewing a class diagram.
+   The generated ``.langium`` file will be downloaded automatically.
+
+2. **Via the API**: Make a POST request to ``/besser_api/generate-output`` with your class diagram data:
+
+.. code-block:: json
+
+    {
+        "id": "diagram-id",
+        "title": "My Model",
+        "model": { /* class diagram data */ },
+        "generator": "langium",
+        "config": {}
+    }
+
+The API will return the generated ``.langium`` file as a text file download.
 
 Generated Grammar Structure
 ----------------------------
