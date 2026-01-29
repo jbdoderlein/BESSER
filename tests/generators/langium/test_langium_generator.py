@@ -285,13 +285,13 @@ def test_langium_generator_non_navigable_associations(tmpdir):
     with open(output_file, "r", encoding="utf-8") as f:
         generated_code = f.read()
 
-    # Owner should have a reference to Car (navigable)
-    assert "OwnerReference:" in generated_code
-    assert "car=CarReference" in generated_code
+    # Owner should have an inline reference to Car (navigable)
+    assert "'car' ':' car=[Car:ID]" in generated_code
     
-    # Car should NOT have a reference section for the non-navigable end
-    # Check that Car doesn't reference Owner
-    assert "// References for Car" not in generated_code or "owner" not in generated_code.lower().split("// References for Owner")[0]
+    # Car should NOT have a reference to Owner (non-navigable)
+    # Check that Car class doesn't contain 'owner' reference
+    car_section = generated_code.split("// Owner class definition")[0]
+    assert "'owner'" not in car_section or "owner=" not in car_section
 
 
 def test_langium_generator_empty_model(tmpdir):
@@ -345,17 +345,17 @@ def test_langium_terminal_types_for_primitives(tmpdir):
     with open(output_file, "r", encoding="utf-8") as f:
         generated_code = f.read()
 
-    # Should use terminal references, not raw type names
-    assert "value=STRING" in generated_code
-    assert "value=INT" in generated_code
-    assert "value=FLOAT" in generated_code
-    assert "value=BOOLEAN" in generated_code
-    assert "value=DATE" in generated_code
+    # Should use terminal references in inline format, not raw type names
+    assert "name=STRING" in generated_code
+    assert "price=INT" in generated_code
+    assert "weight=FLOAT" in generated_code
+    assert "inStock=BOOLEAN" in generated_code
+    assert "releaseDate=DATE" in generated_code
     
     # Should NOT have raw type names
-    assert "value=str" not in generated_code
-    assert "value=int" not in generated_code
-    assert "value=date" not in generated_code
+    assert "=str" not in generated_code
+    assert "=int " not in generated_code  # space after to avoid matching "=INT"
+    assert "=date " not in generated_code  # space after to avoid matching "=DATE"
 
 
 def test_langium_multi_valued_references_use_plus_equals(tmpdir):
@@ -390,8 +390,10 @@ def test_langium_multi_valued_references_use_plus_equals(tmpdir):
     with open(output_file, "r", encoding="utf-8") as f:
         generated_code = f.read()
 
-    # Multi-valued references should use += operator
-    assert "target+=" in generated_code
+    # Multi-valued references should use += operator with field name
+    assert "products+=[Product:ID]" in generated_code
+    assert "categories+=[Category:ID]" in generated_code
     
-    # Should have the repeated assignment pattern with +=
-    assert "target+=[" in generated_code and "(',' target+=[" in generated_code
+    # Should have the repeated assignment pattern with += for the same field
+    assert "(',' products+=[Product:ID])" in generated_code
+    assert "(',' categories+=[Category:ID])" in generated_code

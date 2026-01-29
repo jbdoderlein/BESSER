@@ -27,32 +27,12 @@ EmptyElement:
     '{{ class.name.lower() }}' name=ID {% if class.parents() %}('extends' parent=[{% for parent in class.parents() %}{{ parent.name }}{% if not loop.last %} | {% endif %}{% endfor %}:ID])? {% endif %}'{'
         {% set navigable_ends = class.association_ends()|selectattr('is_navigable')|list %}
         {% if class.attributes or navigable_ends %}(
-            {% for attribute in class.attributes %}properties+={{ class.name }}Property{% if not loop.last %} | {% endif %}{% endfor %}{% if class.attributes and navigable_ends %} | {% endif %}{% for end in navigable_ends %}references+={{ class.name }}Reference{% if not loop.last %} | {% endif %}{% endfor %}
+            {% for attribute in class.attributes %}'{{ attribute.name }}' ':' {{ attribute.name }}={% if attribute.type.name == 'str' %}STRING{% elif attribute.type.name == 'int' %}INT{% elif attribute.type.name == 'float' %}FLOAT{% elif attribute.type.name == 'bool' %}BOOLEAN{% elif attribute.type.name == 'date' %}DATE{% elif attribute.type.name == 'datetime' %}DATETIME{% elif attribute.type.name == 'time' %}TIME{% else %}{{ attribute.type.name }}{% endif %}{% if attribute.multiplicity.max > 1 %} ('[' ']'){% endif %} ';'{% if not loop.last or navigable_ends %} |{% endif %}
+            {% endfor %}{% for end in navigable_ends %}'{{ end.name }}' ':' {{ end.name }}{% if end.multiplicity.max > 1 %}+{% endif %}=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' {{ end.name }}+=[{{ end.type.name }}:ID])*{% endif %} ';'{% if not loop.last %} |{% endif %}
+            {% endfor %}
         )*
         {% endif %}
     '}';
-{% if class.attributes %}
-
-// Properties for {{ class.name }}
-{{ class.name }}Property:
-    {% for attribute in class.attributes %}{{ attribute.name }}={{ attribute.name|capitalize }}Property{% if not loop.last %} | {% endif %}{% endfor %};
-{% for attribute in class.attributes %}
-
-{{ attribute.name|capitalize }}Property:
-    '{{ attribute.name }}' ':' value={% if attribute.type.name == 'str' %}STRING{% elif attribute.type.name == 'int' %}INT{% elif attribute.type.name == 'float' %}FLOAT{% elif attribute.type.name == 'bool' %}BOOLEAN{% elif attribute.type.name == 'date' %}DATE{% elif attribute.type.name == 'datetime' %}DATETIME{% elif attribute.type.name == 'time' %}TIME{% else %}{{ attribute.type.name }}{% endif %}{% if attribute.multiplicity.max > 1 %} ('[' ']'){% endif %} ';';
-{% endfor %}
-{% endif %}
-{% if class.association_ends()|selectattr('is_navigable')|list %}
-
-// References for {{ class.name }}
-{{ class.name }}Reference:
-    {% for end in class.association_ends() if end.is_navigable %}{{ end.name }}={{ end.name|capitalize }}Reference{% if not loop.last %} | {% endif %}{% endfor %};
-{% for end in class.association_ends() if end.is_navigable %}
-
-{{ end.name|capitalize }}Reference:
-    '{{ end.name }}' ':' target{% if end.multiplicity.max > 1 %}+{% endif %}=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' target+=[{{ end.type.name }}:ID])*{% endif %} ';';
-{% endfor %}
-{% endif %}
 
 {% endfor %}
 
