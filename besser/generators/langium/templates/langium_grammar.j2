@@ -14,14 +14,20 @@ entry Model:
     '}';
 
 ModelElement:
-    {% for class in model.classes_sorted_by_inheritance() %}{{ class.name }}{% if not loop.last %} | {% endif %}{% endfor %};
+    {% if model.classes_sorted_by_inheritance() %}{% for class in model.classes_sorted_by_inheritance() %}{{ class.name }}{% if not loop.last %} | {% endif %}{% endfor %}{% else %}EmptyElement{% endif %};
+{% if not model.classes_sorted_by_inheritance() %}
+
+EmptyElement:
+    'empty' name=ID ';';
+{% endif %}
 
 {% for class in model.classes_sorted_by_inheritance() %}
 // {{ class.name }} class definition
 {{ class.name }}:
     '{{ class.name.lower() }}' name=ID {% if class.parents() %}('extends' parent=[{% for parent in class.parents() %}{{ parent.name }}{% if not loop.last %} | {% endif %}{% endfor %}:ID])? {% endif %}'{'
-        {% if class.attributes or class.association_ends() %}(
-            {% for attribute in class.attributes %}properties+={{ class.name }}Property{% if not loop.last %} | {% endif %}{% endfor %}{% if class.attributes and class.association_ends() %} | {% endif %}{% for end in class.association_ends() if end.is_navigable %}references+={{ class.name }}Reference{% if not loop.last %} | {% endif %}{% endfor %}
+        {% set navigable_ends = class.association_ends()|selectattr('is_navigable')|list %}
+        {% if class.attributes or navigable_ends %}(
+            {% for attribute in class.attributes %}properties+={{ class.name }}Property{% if not loop.last %} | {% endif %}{% endfor %}{% if class.attributes and navigable_ends %} | {% endif %}{% for end in navigable_ends %}references+={{ class.name }}Reference{% if not loop.last %} | {% endif %}{% endfor %}
         )*
         {% endif %}
     '}';
@@ -33,10 +39,10 @@ ModelElement:
 {% for attribute in class.attributes %}
 
 {{ attribute.name|capitalize }}Property:
-    '{{ attribute.name }}' ':' value={{ attribute.type.name }}{% if attribute.multiplicity.max == 1 %}{% else %}('[' ']')?{% endif %} ';';
+    '{{ attribute.name }}' ':' value={{ attribute.type.name }}{% if attribute.multiplicity.max > 1 %} ('[' ']'){% endif %} ';';
 {% endfor %}
 {% endif %}
-{% if class.association_ends() %}
+{% if class.association_ends()|selectattr('is_navigable')|list %}
 
 // References for {{ class.name }}
 {{ class.name }}Reference:

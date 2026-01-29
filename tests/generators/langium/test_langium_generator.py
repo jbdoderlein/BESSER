@@ -218,6 +218,102 @@ def test_langium_generator_with_inheritance(tmpdir):
     with open(output_file, "r", encoding="utf-8") as f:
         generated_code = f.read()
 
-    # Check for inheritance syntax
-    assert "Dog:" in generated_code
-    assert "extends" in generated_code or "parent=" in generated_code
+    # Check for inheritance syntax - both keywords should appear together
+    assert "extends" in generated_code
+    assert "parent=[Animal:ID]" in generated_code
+
+
+def test_langium_generator_multi_valued_attributes(tmpdir):
+    """Test Langium generation with multi-valued attributes."""
+    Person = Class(name="Person")
+    Person_name = Property(name="name", type=StringType)
+    Person_hobbies = Property(name="hobbies", type=StringType, multiplicity=Multiplicity(0, "*"))
+    Person.attributes = {Person_name, Person_hobbies}
+
+    model = DomainModel(
+        name="PersonDomain",
+        types={Person},
+        associations=set(),
+        generalizations=set()
+    )
+
+    output_dir = tmpdir.mkdir("output")
+    generator = LangiumGenerator(model=model, output_dir=str(output_dir))
+    generator.generate()
+
+    output_file = os.path.join(str(output_dir), "PersonDomain.langium")
+    with open(output_file, "r", encoding="utf-8") as f:
+        generated_code = f.read()
+
+    # Check that multi-valued attributes have required array notation
+    assert "hobbies" in generated_code
+    # Array brackets should be present for multi-valued attributes
+    assert "('[' ']')" in generated_code or "[ ]" in generated_code
+
+
+def test_langium_generator_non_navigable_associations(tmpdir):
+    """Test that non-navigable association ends don't generate reference rules."""
+    Car = Class(name="Car")
+    Car_model = Property(name="model", type=StringType)
+    Car.attributes = {Car_model}
+
+    Owner = Class(name="Owner")
+    Owner_name = Property(name="name", type=StringType)
+    Owner.attributes = {Owner_name}
+
+    # Create association with only one navigable end
+    ownership = BinaryAssociation(
+        name="Ownership",
+        ends={
+            Property(name="car", type=Car, multiplicity=Multiplicity(1, 1), is_navigable=True),
+            Property(name="owner", type=Owner, multiplicity=Multiplicity(1, 1), is_navigable=False)
+        }
+    )
+
+    model = DomainModel(
+        name="CarDomain",
+        types={Car, Owner},
+        associations={ownership},
+        generalizations=set()
+    )
+
+    output_dir = tmpdir.mkdir("output")
+    generator = LangiumGenerator(model=model, output_dir=str(output_dir))
+    generator.generate()
+
+    output_file = os.path.join(str(output_dir), "CarDomain.langium")
+    with open(output_file, "r", encoding="utf-8") as f:
+        generated_code = f.read()
+
+    # Owner should have a reference to Car (navigable)
+    assert "OwnerReference:" in generated_code
+    assert "car=CarReference" in generated_code
+    
+    # Car should NOT have a reference section for the non-navigable end
+    # Check that Car doesn't reference Owner
+    assert "// References for Car" not in generated_code or "owner" not in generated_code.lower().split("// References for Owner")[0]
+
+
+def test_langium_generator_empty_model(tmpdir):
+    """Test Langium generation with a model that has no classes."""
+    model = DomainModel(
+        name="EmptyDomain",
+        types=set(),
+        associations=set(),
+        generalizations=set()
+    )
+
+    output_dir = tmpdir.mkdir("output")
+    generator = LangiumGenerator(model=model, output_dir=str(output_dir))
+    generator.generate()
+
+    output_file = os.path.join(str(output_dir), "EmptyDomain.langium")
+    assert os.path.isfile(output_file)
+    
+    with open(output_file, "r", encoding="utf-8") as f:
+        generated_code = f.read()
+
+    # Should have a valid ModelElement rule even with no classes
+    assert "ModelElement:" in generated_code
+    # Should generate a fallback element
+    assert "EmptyElement" in generated_code
