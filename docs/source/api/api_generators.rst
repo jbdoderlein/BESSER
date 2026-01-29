@@ -15,6 +15,7 @@ Generators
    generators/api_terraform
    generators/api_rdf
    generators/api_jsonschema
+   generators/api_langium
    generators/api_pytorch
    generators/api_tf
    generators/api_baf

@@ -27,6 +27,7 @@ Generate code for various frameworks and programming languages:
    generators/python
    generators/java
    generators/flutter
+   generators/langium
 
 Data & API
 ----------
