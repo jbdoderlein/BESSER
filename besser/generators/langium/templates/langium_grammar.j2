@@ -39,7 +39,7 @@ EmptyElement:
 {% for attribute in class.attributes %}
 
 {{ attribute.name|capitalize }}Property:
-    '{{ attribute.name }}' ':' value={{ attribute.type.name }}{% if attribute.multiplicity.max > 1 %} ('[' ']'){% endif %} ';';
+    '{{ attribute.name }}' ':' value={% if attribute.type.name == 'str' %}STRING{% elif attribute.type.name == 'int' %}INT{% elif attribute.type.name == 'float' %}FLOAT{% elif attribute.type.name == 'bool' %}BOOLEAN{% elif attribute.type.name == 'date' %}DATE{% elif attribute.type.name == 'datetime' %}DATETIME{% elif attribute.type.name == 'time' %}TIME{% else %}{{ attribute.type.name }}{% endif %}{% if attribute.multiplicity.max > 1 %} ('[' ']'){% endif %} ';';
 {% endfor %}
 {% endif %}
 {% if class.association_ends()|selectattr('is_navigable')|list %}
@@ -50,7 +50,7 @@ EmptyElement:
 {% for end in class.association_ends() if end.is_navigable %}
 
 {{ end.name|capitalize }}Reference:
-    '{{ end.name }}' ':' target=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' target=[{{ end.type.name }}:ID])*{% endif %} ';';
+    '{{ end.name }}' ':' target{% if end.multiplicity.max > 1 %}+{% endif %}=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' target+=[{{ end.type.name }}:ID])*{% endif %} ';';
 {% endfor %}
 {% endif %}
 
@@ -62,7 +62,12 @@ type PrimitiveType = 'int' | 'str' | 'float' | 'bool' | 'date' | 'datetime' | 't
 // Terminal rules
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal INT returns number: /[0-9]+/;
+terminal FLOAT returns number: /[0-9]+\.[0-9]+/;
 terminal STRING: /"[^"]*"|'[^']*'/;
+terminal BOOLEAN returns boolean: /true|false/;
+terminal DATE: /[0-9]{4}-[0-9]{2}-[0-9]{2}/;
+terminal DATETIME: /[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}/;
+terminal TIME: /[0-9]{2}:[0-9]{2}:[0-9]{2}/;
 
 hidden terminal WS: /\s+/;
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;

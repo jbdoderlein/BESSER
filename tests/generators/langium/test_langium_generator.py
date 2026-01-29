@@ -3,7 +3,7 @@ import pytest
 from besser.generators.langium import LangiumGenerator
 from besser.BUML.metamodel.structural import (
     Class, DomainModel, Enumeration, EnumerationLiteral,
-    DateType, StringType, IntegerType, Property, BinaryAssociation,
+    DateType, StringType, IntegerType, FloatType, BooleanType, Property, BinaryAssociation,
     Multiplicity, Generalization
 )
 
@@ -317,3 +317,81 @@ def test_langium_generator_empty_model(tmpdir):
     assert "ModelElement:" in generated_code
     # Should generate a fallback element
     assert "EmptyElement" in generated_code
+
+
+def test_langium_terminal_types_for_primitives(tmpdir):
+    """Test that primitive types map to proper Langium terminals."""
+    Product = Class(name="Product")
+    Product.attributes = {
+        Property(name="name", type=StringType),
+        Property(name="price", type=IntegerType),
+        Property(name="weight", type=FloatType),
+        Property(name="inStock", type=BooleanType),
+        Property(name="releaseDate", type=DateType)
+    }
+
+    model = DomainModel(
+        name="ProductDomain",
+        types={Product},
+        associations=set(),
+        generalizations=set()
+    )
+
+    output_dir = tmpdir.mkdir("output")
+    generator = LangiumGenerator(model=model, output_dir=str(output_dir))
+    generator.generate()
+
+    output_file = os.path.join(str(output_dir), "ProductDomain.langium")
+    with open(output_file, "r", encoding="utf-8") as f:
+        generated_code = f.read()
+
+    # Should use terminal references, not raw type names
+    assert "value=STRING" in generated_code
+    assert "value=INT" in generated_code
+    assert "value=FLOAT" in generated_code
+    assert "value=BOOLEAN" in generated_code
+    assert "value=DATE" in generated_code
+    
+    # Should NOT have raw type names
+    assert "value=str" not in generated_code
+    assert "value=int" not in generated_code
+    assert "value=date" not in generated_code
+
+
+def test_langium_multi_valued_references_use_plus_equals(tmpdir):
+    """Test that multi-valued references use += operator instead of =."""
+    Product = Class(name="Product")
+    Product.attributes = {Property(name="name", type=StringType)}
+
+    Category = Class(name="Category")
+    Category.attributes = {Property(name="title", type=StringType)}
+
+    # Multi-valued association (should use +=)
+    product_categories = BinaryAssociation(
+        name="ProductCategories",
+        ends={
+            Property(name="products", type=Product, multiplicity=Multiplicity(0, "*")),
+            Property(name="categories", type=Category, multiplicity=Multiplicity(1, "*"))
+        }
+    )
+
+    model = DomainModel(
+        name="ECommerce",
+        types={Product, Category},
+        associations={product_categories},
+        generalizations=set()
+    )
+
+    output_dir = tmpdir.mkdir("output")
+    generator = LangiumGenerator(model=model, output_dir=str(output_dir))
+    generator.generate()
+
+    output_file = os.path.join(str(output_dir), "ECommerce.langium")
+    with open(output_file, "r", encoding="utf-8") as f:
+        generated_code = f.read()
+
+    # Multi-valued references should use += operator
+    assert "target+=" in generated_code
+    
+    # Should have the repeated assignment pattern with +=
+    assert "target+=[" in generated_code and "(',' target+=[" in generated_code
