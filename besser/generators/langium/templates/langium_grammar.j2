@@ -1,0 +1,63 @@
+grammar {{ grammar_name }}
+
+{% if model.get_enumerations() %}
+// Enumerations
+{% for enum in model.get_enumerations() %}
+type {{ enum.name }} = {% for literal in enum.literals %}'{{ literal.name }}'{% if not loop.last %} | {% endif %}{% endfor %};
+{% endfor %}
+
+{% endif %}
+// Entry point for the grammar
+entry Model:
+    'model' name=ID '{'
+        (elements+=ModelElement)*
+    '}';
+
+ModelElement:
+    {% for class in model.classes_sorted_by_inheritance() %}{{ class.name }}{% if not loop.last %} | {% endif %}{% endfor %};
+
+{% for class in model.classes_sorted_by_inheritance() %}
+// {{ class.name }} class definition
+{{ class.name }}:
+    '{{ class.name.lower() }}' name=ID {% if class.parents() %}('extends' parent=[{% for parent in class.parents() %}{{ parent.name }}{% if not loop.last %} | {% endif %}{% endfor %}:ID])? {% endif %}'{'
+        {% if class.attributes or class.association_ends() %}(
+            {% for attribute in class.attributes %}properties+={{ class.name }}Property{% if not loop.last %} | {% endif %}{% endfor %}{% if class.attributes and class.association_ends() %} | {% endif %}{% for end in class.association_ends() if end.is_navigable %}references+={{ class.name }}Reference{% if not loop.last %} | {% endif %}{% endfor %}
+        )*
+        {% endif %}
+    '}';
+{% if class.attributes %}
+
+// Properties for {{ class.name }}
+{{ class.name }}Property:
+    {% for attribute in class.attributes %}{{ attribute.name }}={{ attribute.name|capitalize }}Property{% if not loop.last %} | {% endif %}{% endfor %};
+{% for attribute in class.attributes %}
+
+{{ attribute.name|capitalize }}Property:
+    '{{ attribute.name }}' ':' value={{ attribute.type.name }}{% if attribute.multiplicity.max == 1 %}{% else %}('[' ']')?{% endif %} ';';
+{% endfor %}
+{% endif %}
+{% if class.association_ends() %}
+
+// References for {{ class.name }}
+{{ class.name }}Reference:
+    {% for end in class.association_ends() if end.is_navigable %}{{ end.name }}={{ end.name|capitalize }}Reference{% if not loop.last %} | {% endif %}{% endfor %};
+{% for end in class.association_ends() if end.is_navigable %}
+
+{{ end.name|capitalize }}Reference:
+    '{{ end.name }}' ':' target=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' target=[{{ end.type.name }}:ID])*{% endif %} ';';
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+// Primitive type definitions
+type PrimitiveType = 'int' | 'str' | 'float' | 'bool' | 'date' | 'datetime' | 'time' | 'timedelta' | 'any';
+
+// Terminal rules
+terminal ID: /[_a-zA-Z][\w_]*/;
+terminal INT returns number: /[0-9]+/;
+terminal STRING: /"[^"]*"|'[^']*'/;
+
+hidden terminal WS: /\s+/;
+hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
+hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
