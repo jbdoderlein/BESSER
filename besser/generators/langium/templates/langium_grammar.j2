@@ -27,8 +27,8 @@ EmptyElement:
     '{{ class.name.lower() }}' {% if class.parents() %}('extends' parent=[{% for parent in class.parents() %}{{ parent.name }}{% if not loop.last %} | {% endif %}{% endfor %}:ID])? {% endif %}'{'
         {% set navigable_ends = class.association_ends()|selectattr('is_navigable')|list %}
         {% for attribute in class.attributes %}('{{ attribute.name }}' ':' {{ attribute.name }}={% if attribute.type.name == 'str' %}STRING{% elif attribute.type.name == 'int' %}INT{% elif attribute.type.name == 'float' %}FLOAT{% elif attribute.type.name == 'bool' %}BOOLEAN{% elif attribute.type.name == 'date' %}DATE{% elif attribute.type.name == 'datetime' %}DATETIME{% elif attribute.type.name == 'time' %}TIME{% else %}{{ attribute.type.name }}{% endif %}{% if attribute.multiplicity.max > 1 %} ('[' ']'){% endif %} ';')?
-        {% endfor %}{% for end in navigable_ends %}{% set field_name = end.owner.name if end.owner and end.owner.__class__.__name__ in ['Association', 'BinaryAssociation'] else end.name %}('{{ field_name }}' ':' {% if end.is_composite %}{{ field_name }}{% if end.multiplicity.max > 1 %}+={% else %}={% endif %}{{ end.type.name }}{% else %}{{ field_name }}{% if end.multiplicity.max > 1 %}+{% endif %}=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' {{ field_name }}+=[{{ end.type.name }}:ID])*{% endif %}{% endif %} ';')?
-        {% endfor %}
+        {% endfor %}{% for end in navigable_ends %}{% set opposite = end.opposite_end() %}{% if not (opposite and opposite.is_composite) %}{% set field_name = end.owner.name if end.owner and end.owner.__class__.__name__ in ['Association', 'BinaryAssociation'] else end.name %}('{{ field_name }}' ':' {% if end.is_composite %}{{ field_name }}{% if end.multiplicity.max > 1 %}+={% else %}={% endif %}{{ end.type.name }}{% if end.multiplicity.max > 1 %} (',' {{ field_name }}+={{ end.type.name }})*{% endif %}{% else %}{{ field_name }}{% if end.multiplicity.max > 1 %}+{% endif %}=[{{ end.type.name }}:ID]{% if end.multiplicity.max > 1 %} (',' {{ field_name }}+=[{{ end.type.name }}:ID])*{% endif %}{% endif %} ';')?
+        {% endif %}{% endfor %}
     '}';
 
 {% endfor %}
